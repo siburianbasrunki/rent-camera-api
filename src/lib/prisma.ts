@@ -37,5 +37,5 @@ prisma.$use(async (params, next) => {
 export const brandClient = prisma.brand;
 export const cameraClient = prisma.camera;
 export const bannerClient = prisma.banner;
-
+export const userClient = prisma.user;
 export default prisma;

@@ -3,26 +3,28 @@ import prisma from '../lib/prisma';
 import { sendRegistrationEmail, sendOtpEmail } from '../services/email.service';
 import { config } from '../config/auth';
 import jwt from 'jsonwebtoken';
-// import { v4 as uuidv4 } from 'uuid';
+
+export interface AuthenticatedRequest extends Request {
+  userId?: string;
+}
 
 const generateOtp = () => {
   return Math.floor(1000 + Math.random() * 9000).toString();
 };
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email } = req.body;
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already registered' });
+      res.status(400).json({ error: 'Email already registered' });
+      return;
     }
 
-    // Create new user
     const user = await prisma.user.create({
       data: {
         name,
@@ -30,10 +32,10 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
-    // Send registration email
     await sendRegistrationEmail(email, name);
 
-    res.status(201).json({ 
+    res.status(201).json({
+      staus: 'success', 
       message: 'Registration successful. Please check your email.', 
       data: { 
         id: user.id,
@@ -47,7 +49,7 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-export const requestOtp = async (req: Request, res: Response) => {
+export const requestOtp = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email } = req.body;
 
@@ -56,7 +58,8 @@ export const requestOtp = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'Email not registered' });
+      res.status(404).json({ error: 'Email not registered' });
+      return;
     }
 
     const otp = generateOtp();
@@ -87,7 +90,7 @@ export const requestOtp = async (req: Request, res: Response) => {
   }
 };
 
-export const verifyOtp = async (req: Request, res: Response) => {
+export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, otp } = req.body;
 
@@ -96,12 +99,14 @@ export const verifyOtp = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'Email not registered' });
+      res.status(404).json({ error: 'Email not registered' });
+      return;
     }
 
     // Check if OTP matches and is not expired
     if (user.otp !== otp || !user.otpExpiry || new Date() > user.otpExpiry) {
-      return res.status(400).json({ error: 'Invalid or expired OTP' });
+      res.status(400).json({ error: 'Invalid or expired OTP' });
+      return;
     }
 
     // Clear OTP after successful verification
@@ -137,10 +142,16 @@ export const verifyOtp = async (req: Request, res: Response) => {
   }
 };
 
-export const getCurrentUser = async (req: Request, res: Response) => {
+// Use AuthenticatedRequest instead of Request for protected routes
+export const getCurrentUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     // The user ID is set by the auth middleware
-    const userId = req.user.id;
+    const userId = req.userId;
+
+    if (!userId) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -153,7 +164,8 @@ export const getCurrentUser = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     res.status(200).json({ data: user });
