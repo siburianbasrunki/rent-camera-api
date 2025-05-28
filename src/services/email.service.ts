@@ -6,7 +6,7 @@ const resend = new Resend(config.resendApiKey);
 export const sendRegistrationEmail = async (email: string, name: string) => {
   try {
     await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: 'no-reply@rent-admin.site',
       to: email,
       subject: 'Registration Successful',
       html: `
@@ -24,7 +24,7 @@ export const sendRegistrationEmail = async (email: string, name: string) => {
 export const sendOtpEmail = async (email: string, otp: string) => {
   try {
     await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: 'no-reply@rent-admin.site',
       to: email,
       subject: 'Your OTP Code',
       html: `
