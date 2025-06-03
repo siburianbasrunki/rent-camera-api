@@ -39,3 +39,111 @@ export const sendOtpEmail = async (email: string, otp: string) => {
     throw error;
   }
 };
+
+export const sendBookingConfirmationEmail = async (
+  email: string,
+  name: string,
+  bookingDetails: {
+    cameraName: string;
+    bookingDate: string;
+    duration: string;
+    totalPrice: string;
+    paymentCode?: string;
+    paymentMethod: string;
+  }
+) => {
+  try {
+    await resend.emails.send({
+      from: 'no-reply@rent-admin.site',
+      to: email,
+      subject: 'Booking Confirmation',
+      html: `
+        <h1>Booking Confirmation</h1>
+        <p>Hello ${name},</p>
+        <p>Your booking has been confirmed with the following details:</p>
+        
+        <table style="border-collapse: collapse; width: 100%; max-width: 600px; margin: 20px 0;">
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Camera</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${bookingDetails.cameraName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Booking Date</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${bookingDetails.bookingDate}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Duration</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${bookingDetails.duration} hours</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Total Price</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${bookingDetails.totalPrice}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Payment Method</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${bookingDetails.paymentMethod}</td>
+          </tr>
+          ${bookingDetails.paymentCode ? `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Payment Code</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${bookingDetails.paymentCode}</td>
+          </tr>
+          ` : ''}
+        </table>
+        
+        <p>Thank you for your booking!</p>
+      `,
+    });
+  } catch (error) {
+    console.error('Error sending booking confirmation email:', error);
+    throw error;
+  }
+};
+
+export const sendPaymentSuccessEmail = async (
+  email: string,
+  name: string,
+  bookingDetails: {
+    cameraName: string;
+    bookingDate: string;
+    totalPrice: string;
+    paymentMethod: string;
+  }
+) => {
+  try {
+    await resend.emails.send({
+      from: 'no-reply@rent-admin.site',
+      to: email,
+      subject: 'Payment Successful',
+      html: `
+        <h1>Payment Successful</h1>
+        <p>Hello ${name},</p>
+        <p>Your payment for the following booking has been successfully processed:</p>
+        
+        <table style="border-collapse: collapse; width: 100%; max-width: 600px; margin: 20px 0;">
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Camera</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${bookingDetails.cameraName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Booking Date</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${bookingDetails.bookingDate}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Total Paid</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${bookingDetails.totalPrice}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Payment Method</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${bookingDetails.paymentMethod}</td>
+          </tr>
+        </table>
+        
+        <p>Thank you for your payment!</p>
+      `,
+    });
+  } catch (error) {
+    console.error('Error sending payment success email:', error);
+    throw error;
+  }
+};

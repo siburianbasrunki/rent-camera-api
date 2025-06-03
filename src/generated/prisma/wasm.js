@@ -166,6 +166,33 @@ exports.Prisma.FeatureScalarFieldEnum = {
   value: 'value'
 };
 
+exports.Prisma.BookingScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  cameraId: 'cameraId',
+  date: 'date',
+  duration: 'duration',
+  purpose: 'purpose',
+  status: 'status',
+  totalPrice: 'totalPrice',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.PaymentScalarFieldEnum = {
+  id: 'id',
+  bookingId: 'bookingId',
+  paymentMethod: 'paymentMethod',
+  amount: 'amount',
+  status: 'status',
+  midtransOrderId: 'midtransOrderId',
+  paymentCode: 'paymentCode',
+  paymentUrl: 'paymentUrl',
+  expiryTime: 'expiryTime',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -185,12 +212,34 @@ exports.Role = exports.$Enums.Role = {
   ADMIN: 'ADMIN'
 };
 
+exports.BookingStatus = exports.$Enums.BookingStatus = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  CANCELLED: 'CANCELLED',
+  COMPLETED: 'COMPLETED'
+};
+
+exports.PaymentMethod = exports.$Enums.PaymentMethod = {
+  BANK_TRANSFER: 'BANK_TRANSFER',
+  QRIS: 'QRIS',
+  CREDIT_CARD: 'CREDIT_CARD'
+};
+
+exports.PaymentStatus = exports.$Enums.PaymentStatus = {
+  PENDING: 'PENDING',
+  SETTLED: 'SETTLED',
+  EXPIRED: 'EXPIRED',
+  FAILED: 'FAILED'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
   Banner: 'Banner',
   Brand: 'Brand',
   Camera: 'Camera',
-  Feature: 'Feature'
+  Feature: 'Feature',
+  Booking: 'Booking',
+  Payment: 'Payment'
 };
 
 /**

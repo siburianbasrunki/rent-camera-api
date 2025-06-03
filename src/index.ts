@@ -5,6 +5,7 @@ import cameraRouter from "./routes/camera.router";
 import bannerRoute from "./routes/banner.router";
 import authRouter from "./routes/auth.router";
 import userRouter from "./routes/user.router";
+import BookingRouter from "./routes/booking.router"
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -15,6 +16,7 @@ const port = process.env.PORT || 8080;
 app.use(cors());
 app.use(express.json());
 
+app.use("/booking", BookingRouter)
 app.use("/brands", brandRouter);
 app.use("/cameras", cameraRouter);
 app.use("/banner", bannerRoute);

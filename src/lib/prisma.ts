@@ -38,4 +38,5 @@ export const brandClient = prisma.brand;
 export const cameraClient = prisma.camera;
 export const bannerClient = prisma.banner;
 export const userClient = prisma.user;
+export const BookingClient = prisma.booking;
 export default prisma;
