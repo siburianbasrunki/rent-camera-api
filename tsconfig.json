@@ -19,7 +19,9 @@
     "noEmit": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "baseUrl": "src"
+    "baseUrl": "src",
+    "strict": false,
+    "skipLibCheck": false
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
