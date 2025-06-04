@@ -347,3 +347,42 @@ export const cancelBooking = async (
     res.status(500).json({ error: "Failed to cancel booking" });
   }
 };
+
+export const getAllBookings = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId! },
+    });
+
+    if (!user || user.role !== 'ADMIN') {
+      res.status(403).json({ error: "Unauthorized: Admin access required" });
+      return;
+    }
+
+    const bookings = await prisma.booking.findMany({
+      include: {
+        camera: true,
+        payment: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phoneNumber: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    res.status(200).json({ data: bookings });
+  } catch (error) {
+    console.error("Error fetching all bookings:", error);
+    res.status(500).json({ error: "Failed to fetch bookings" });
+  }
+};
