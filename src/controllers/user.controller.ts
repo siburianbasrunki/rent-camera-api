@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import {
   deleteFromCloudinary,
-  uploadToCloudinary,
+  uploadToCloudinaryFromBuffer,
 } from "../utils/cloudinaryUpload";
 export interface AuthenticatedRequest extends Request {
   userId?: string;
@@ -103,10 +103,14 @@ export const updateUser = async (
       }
 
       // Upload new image
-      const imageData = await uploadToCloudinary(req.file.path, {
-        folder: "user-profiles",
-        format: "webp",
-      });
+      const imageData = await uploadToCloudinaryFromBuffer(
+        req.file.buffer,
+        req.file.originalname,
+        {
+          folder: "user-profiles",
+          format: "webp",
+        }
+      );
 
       updateData.imageUrl = imageData.imageUrl;
       updateData.imageId = imageData.imageId;
@@ -135,6 +139,7 @@ export const updateUser = async (
     res.status(500).json({ error: "Failed to update user" });
   }
 };
+
 
 // Delete user
 export const deleteUser = async (

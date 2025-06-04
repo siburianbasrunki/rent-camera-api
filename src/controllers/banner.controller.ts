@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { bannerClient } from "../lib/prisma";
-import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinaryUpload";
+import { deleteFromCloudinary, uploadToCloudinaryFromBuffer } from "../utils/cloudinaryUpload";
 export const getBanner = async (req: Request, res: Response) => {
   try {
     const banner = await bannerClient.findFirst();
@@ -27,11 +27,15 @@ export const uploadBanner = async (req: Request, res: Response) => {
     // Upload banner baru ke Cloudinary
     let imageData = { imageUrl: "", imageId: "" };
     if (req.file) {
-      imageData = await uploadToCloudinary(req.file.path, {
-        folder: "banner",
-        format: "webp",
-        transformation: [{ width: 1200, crop: "scale" }],
-      });
+      imageData = await uploadToCloudinaryFromBuffer(
+        req.file.buffer,
+        req.file.originalname,
+        {
+          folder: "banner",
+          format: "webp",
+          transformation: [{ width: 1200, crop: "scale" }],
+        }
+      );
     }
 
     // Simpan data banner baru ke database

@@ -12,40 +12,71 @@ type UploadResult = {
   imageId: string;
 };
 
-export const uploadToCloudinary = async (
-  filePath: string, 
+export const uploadToCloudinaryFromBuffer = async (
+  fileBuffer: Buffer,
+  originalName: string,
   options: UploadOptions
 ): Promise<UploadResult> => {
-  try {
-    const defaultTransformations = [
-      { fetch_format: 'auto', quality: 'auto' }
-    ];
+  const streamUpload = () => {
+    return new Promise<UploadResult>((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: options.folder,
+          format: options.format || 'webp',
+          transformation: options.transformation || [],
+          public_id: originalName.split('.')[0]
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          if (!result) return reject(new Error('No result from Cloudinary'));
+          resolve({
+            imageUrl: result.secure_url,
+            imageId: result.public_id
+          });
+        }
+      );
 
-    const result = await cloudinary.uploader.upload(filePath, {
-      folder: options.folder,
-      format: options.format || 'webp',
-      transformation: options.transformation || defaultTransformations
+      stream.end(fileBuffer);
     });
+  };
 
-    // Hapus file temp setelah upload
-    fs.unlinkSync(filePath);
-
-    // Pastikan URL menggunakan format yang diinginkan
-    const format = options.format || 'webp';
-    const imageUrl = result.secure_url.replace(/\.[^/.]+$/, `.${format}`);
-
-    return {
-      imageUrl,
-      imageId: result.public_id
-    };
-  } catch (error) {
-    // Hapus file temp jika ada error
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-    throw error;
-  }
+  return streamUpload();
 };
+
+// export const uploadToCloudinary = async (
+//   filePath: string, 
+//   options: UploadOptions
+// ): Promise<UploadResult> => {
+//   try {
+//     const defaultTransformations = [
+//       { fetch_format: 'auto', quality: 'auto' }
+//     ];
+
+//     const result = await cloudinary.uploader.upload(filePath, {
+//       folder: options.folder,
+//       format: options.format || 'webp',
+//       transformation: options.transformation || defaultTransformations
+//     });
+
+//     // Hapus file temp setelah upload
+//     fs.unlinkSync(filePath);
+
+//     // Pastikan URL menggunakan format yang diinginkan
+//     const format = options.format || 'webp';
+//     const imageUrl = result.secure_url.replace(/\.[^/.]+$/, `.${format}`);
+
+//     return {
+//       imageUrl,
+//       imageId: result.public_id
+//     };
+//   } catch (error) {
+//     // Hapus file temp jika ada error
+//     if (fs.existsSync(filePath)) {
+//       fs.unlinkSync(filePath);
+//     }
+//     throw error;
+//   }
+// };
 
 export const deleteFromCloudinary = async (imageId: string): Promise<void> => {
   try {

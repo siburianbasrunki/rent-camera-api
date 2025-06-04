@@ -1,25 +1,36 @@
 import cloudinary from "../config/cloudinary";
 import { Request, Response } from "express";
 import { brandClient } from "../lib/prisma";
-import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinaryUpload";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinaryFromBuffer,
+} from "../utils/cloudinaryUpload";
 // getAllBrands
-export const getAllBrands = async (req: Request, res: Response): Promise<void> => {
+export const getAllBrands = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const allBrands = await brandClient.findMany({
       include: {
-        cameras: true
-      }
+        cameras: true,
+      },
     });
 
     res.status(200).json({ data: allBrands });
   } catch (e) {
     console.log(e);
-    res.status(500).json({ error: "Terjadi kesalahan saat mengambil data brand" });
+    res
+      .status(500)
+      .json({ error: "Terjadi kesalahan saat mengambil data brand" });
   }
 };
 
 // getBrandById
-export const getBrandById = async (req: Request, res: Response): Promise<void> => {
+export const getBrandById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const brandId = req.params.id;
     const brand = await brandClient.findUnique({
@@ -27,8 +38,8 @@ export const getBrandById = async (req: Request, res: Response): Promise<void> =
         id: brandId,
       },
       include: {
-        cameras: true
-      }
+        cameras: true,
+      },
     });
 
     if (!brand) {
@@ -39,47 +50,60 @@ export const getBrandById = async (req: Request, res: Response): Promise<void> =
     res.status(200).json({ data: brand });
   } catch (e) {
     console.log(e);
-    res.status(500).json({ error: "Terjadi kesalahan saat mengambil data brand" });
+    res
+      .status(500)
+      .json({ error: "Terjadi kesalahan saat mengambil data brand" });
   }
 };
 
 // createBrand
-export const createBrand = async (req: Request, res: Response): Promise<void> => {
+export const createBrand = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { name } = req.body;
     let imageData = { imageUrl: null, imageId: null };
 
-    
     if (req.file) {
-      imageData = await uploadToCloudinary(req.file.path, {
-        folder: "brands",
-        format: "webp"
-      });
+      imageData = await uploadToCloudinaryFromBuffer(
+        req.file.buffer,
+        req.file.originalname,
+        {
+          folder: "brands",
+          format: "webp",
+        }
+      );
     }
 
     const brand = await brandClient.create({
       data: {
         name,
         imageUrl: imageData.imageUrl,
-        imageId: imageData.imageId
+        imageId: imageData.imageId,
       },
     });
 
     res.status(201).json({ data: brand });
   } catch (e) {
     console.log(e);
-    res.status(500).json({ error: "Terjadi kesalahan saat membuat brand baru" });
+    res
+      .status(500)
+      .json({ error: "Terjadi kesalahan saat membuat brand baru" });
   }
 };
 
 // updateBrand
-export const updateBrand = async (req: Request, res: Response): Promise<void> => {
+export const updateBrand = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const brandId = req.params.id;
     const { name } = req.body;
-    
+
     const existingBrand = await brandClient.findUnique({
-      where: { id: brandId }
+      where: { id: brandId },
     });
 
     if (!existingBrand) {
@@ -88,18 +112,22 @@ export const updateBrand = async (req: Request, res: Response): Promise<void> =>
     }
 
     const updateData: any = {};
-    
+
     if (name) updateData.name = name;
 
     if (req.file) {
       if (existingBrand.imageId) {
         await deleteFromCloudinary(existingBrand.imageId);
       }
-      
-      const imageData = await uploadToCloudinary(req.file.path, {
-        folder: "brands",
-        format: "webp"
-      });
+
+      const imageData = await uploadToCloudinaryFromBuffer(
+        req.file.buffer,
+        req.file.originalname,
+        {
+          folder: "brands",
+          format: "webp",
+        }
+      );
       updateData.imageUrl = imageData.imageUrl;
       updateData.imageId = imageData.imageId;
     }
@@ -117,14 +145,16 @@ export const updateBrand = async (req: Request, res: Response): Promise<void> =>
     res.status(500).json({ error: "Terjadi kesalahan saat mengupdate brand" });
   }
 };
-
 // deleteBrand
-export const deleteBrand = async (req: Request, res: Response): Promise<void> => {
+export const deleteBrand = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const brandId = req.params.id;
-    
+
     const brand = await brandClient.findUnique({
-      where: { id: brandId }
+      where: { id: brandId },
     });
 
     if (!brand) {
@@ -134,7 +164,7 @@ export const deleteBrand = async (req: Request, res: Response): Promise<void> =>
 
     // Hapus semua kamera yang terkait dengan brand ini terlebih dahulu
     await prisma.camera.deleteMany({
-      where: { brandId }
+      where: { brandId },
     });
 
     if (brand.imageId) {
@@ -147,7 +177,9 @@ export const deleteBrand = async (req: Request, res: Response): Promise<void> =>
       },
     });
 
-    res.status(200).json({ message: "Brand dan semua kamera terkait berhasil dihapus" });
+    res
+      .status(200)
+      .json({ message: "Brand dan semua kamera terkait berhasil dihapus" });
   } catch (e) {
     console.log(e);
     res.status(500).json({ error: "Terjadi kesalahan saat menghapus brand" });

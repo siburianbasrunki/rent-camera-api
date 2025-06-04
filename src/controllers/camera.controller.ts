@@ -1,7 +1,7 @@
 import cloudinary from "../config/cloudinary";
 import { Request, Response } from "express";
 import { cameraClient } from "../lib/prisma";
-import { uploadToCloudinary } from "../utils/cloudinaryUpload";
+import {  uploadToCloudinaryFromBuffer } from "../utils/cloudinaryUpload";
 
 // getAllCameras
 export const getAllCameras = async (
@@ -60,11 +60,17 @@ export const createCamera = async (req: Request, res: Response): Promise<void> =
     let imageData = { imageUrl: null, imageId: null };
 
     if (req.file) {
-      imageData = await uploadToCloudinary(req.file.path, {
-        folder: "cameras",
-        format: "webp",
-        transformation: [{ width: 1200, crop: "scale" }],
-      });
+      imageData = await uploadToCloudinaryFromBuffer(
+        req.file.buffer,          // Buffer from multer memory storage
+        req.file.originalname,    // Original filename
+        {
+          folder: "cameras",      // Cloudinary folder
+          format: "webp",         // Optional: output format
+          transformation: [       // Optional: transformations
+            { width: 1200, crop: "scale" }
+          ]
+        }
+      );
     }
 
     // Parse features if provided
@@ -134,11 +140,15 @@ export const updateCamera = async (
         await cloudinary.uploader.destroy(existingCamera.imageId);
       }
 
-      const imageData = await uploadToCloudinary(req.file.path, {
-        folder: "cameras",
-        format: "webp",
-        transformation: [{ width: 1200, crop: "scale" }],
-      });
+      const imageData = await uploadToCloudinaryFromBuffer(
+        req.file.buffer,
+        req.file.originalname,
+        {
+          folder: "cameras",
+          format: "webp",
+          transformation: [{ width: 1200, crop: "scale" }],
+        }
+      );
       updateData.imageUrl = imageData.imageUrl;
       updateData.imageId = imageData.imageId;
     }
