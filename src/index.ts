@@ -5,27 +5,28 @@ import cameraRouter from "./routes/camera.router";
 import bannerRoute from "./routes/banner.router";
 import authRouter from "./routes/auth.router";
 import userRouter from "./routes/user.router";
-import BookingRouter from "./routes/booking.router"
+import BookingRouter from "./routes/booking.router";
 import dotenv from "dotenv";
+import serverless from "serverless-http";
 
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 8080;
 
 app.use(cors());
 app.use(express.json());
 
-app.use("/booking", BookingRouter)
+app.use("/booking", BookingRouter);
 app.use("/brands", brandRouter);
 app.use("/cameras", cameraRouter);
 app.use("/banner", bannerRoute);
 app.use("/auth", authRouter);
 app.use("/users", userRouter);
+
 app.get("/ping", (req, res) => {
-  res.json({ message: "pong" }).status(200);
+  res.json({ message: "pong" });
 });
 
-app.listen(port, () => {
-  console.log(`Server up and running on port: ${port}`);
-});
+// Jangan pakai app.listen di serverless
+// export handler untuk Vercel
+export const handler = serverless(app);
