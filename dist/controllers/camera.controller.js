@@ -1,0 +1,169 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deleteCamera = exports.updateCamera = exports.createCamera = exports.getCameraById = exports.getAllCameras = void 0;
+const cloudinary_1 = __importDefault(require("../config/cloudinary"));
+const prisma_1 = require("../lib/prisma");
+const cloudinaryUpload_1 = require("../utils/cloudinaryUpload");
+// getAllCameras
+const getAllCameras = async (req, res) => {
+    try {
+        const allCameras = await prisma_1.cameraClient.findMany({
+            include: {
+                brand: true,
+            },
+        });
+        res.status(200).json({ data: allCameras });
+    }
+    catch (e) {
+        console.log(e);
+        res
+            .status(500)
+            .json({ error: "Terjadi kesalahan saat mengambil data camera" });
+    }
+};
+exports.getAllCameras = getAllCameras;
+// getCameraById
+const getCameraById = async (req, res) => {
+    try {
+        const cameraId = req.params.id;
+        const camera = await prisma_1.cameraClient.findUnique({
+            where: { id: cameraId },
+            include: {
+                brand: true,
+                features: true
+            },
+        });
+        if (!camera) {
+            res.status(404).json({ error: "Camera tidak ditemukan" });
+            return;
+        }
+        const response = Object.assign(Object.assign({}, camera), { ciri_ciri: camera.features.map(f => ({ ciri: f.value })), features: undefined });
+        res.status(200).json({ data: response });
+    }
+    catch (e) {
+        console.log(e);
+        res.status(500).json({ error: "Terjadi kesalahan saat mengambil data camera" });
+    }
+};
+exports.getCameraById = getCameraById;
+// createCamera
+const createCamera = async (req, res) => {
+    try {
+        const { name, price, avaliable, brandId, features } = req.body;
+        let imageData = { imageUrl: null, imageId: null };
+        if (req.file) {
+            imageData = await (0, cloudinaryUpload_1.uploadToCloudinary)(req.file.path, {
+                folder: "cameras",
+                format: "webp",
+                transformation: [{ width: 1200, crop: "scale" }],
+            });
+        }
+        // Parse features if provided
+        const featuresArray = features ? JSON.parse(features) : [];
+        const camera = await prisma_1.cameraClient.create({
+            data: {
+                name,
+                price,
+                avaliable: avaliable === "true",
+                brand: { connect: { id: brandId } },
+                imageUrl: imageData.imageUrl,
+                imageId: imageData.imageId,
+                features: {
+                    create: featuresArray.map((f) => ({ value: f }))
+                }
+            },
+            include: {
+                features: true
+            }
+        });
+        res.status(201).json({
+            data: Object.assign(Object.assign({}, camera), { ciri_ciri: camera.features.map(f => ({ ciri: f.value })), features: undefined })
+        });
+    }
+    catch (e) {
+        console.log(e);
+        res.status(500).json({ error: "Terjadi kesalahan saat membuat camera baru" });
+    }
+};
+exports.createCamera = createCamera;
+// updateCamera
+const updateCamera = async (req, res) => {
+    try {
+        const cameraId = req.params.id;
+        const { name, price, avaliable, brandId } = req.body;
+        const existingCamera = await prisma_1.cameraClient.findUnique({
+            where: { id: cameraId },
+        });
+        if (!existingCamera) {
+            res.status(404).json({ error: "Camera tidak ditemukan" });
+            return;
+        }
+        const updateData = {};
+        if (name)
+            updateData.name = name;
+        if (price)
+            updateData.price = price;
+        if (avaliable !== undefined)
+            updateData.avaliable = avaliable === "true";
+        if (brandId) {
+            updateData.brand = {
+                connect: { id: brandId },
+            };
+        }
+        if (req.file) {
+            if (existingCamera.imageId) {
+                await cloudinary_1.default.uploader.destroy(existingCamera.imageId);
+            }
+            const imageData = await (0, cloudinaryUpload_1.uploadToCloudinary)(req.file.path, {
+                folder: "cameras",
+                format: "webp",
+                transformation: [{ width: 1200, crop: "scale" }],
+            });
+            updateData.imageUrl = imageData.imageUrl;
+            updateData.imageId = imageData.imageId;
+        }
+        const camera = await prisma_1.cameraClient.update({
+            where: {
+                id: cameraId,
+            },
+            data: updateData,
+        });
+        res.status(200).json({ data: camera });
+    }
+    catch (e) {
+        console.log(e);
+        res.status(500).json({ error: "Terjadi kesalahan saat mengupdate camera" });
+    }
+};
+exports.updateCamera = updateCamera;
+// deleteCamera
+const deleteCamera = async (req, res) => {
+    try {
+        const cameraId = req.params.id;
+        const camera = await prisma_1.cameraClient.findUnique({
+            where: { id: cameraId },
+        });
+        if (!camera) {
+            res.status(404).json({ error: "Camera tidak ditemukan" });
+            return;
+        }
+        if (camera.imageId) {
+            await cloudinary_1.default.uploader.destroy(camera.imageId);
+        }
+        await prisma_1.cameraClient.delete({
+            where: {
+                id: cameraId,
+            },
+        });
+        res.status(200).json({ message: "Camera berhasil dihapus" });
+    }
+    catch (e) {
+        console.log(e);
+        res.status(500).json({ error: "Terjadi kesalahan saat menghapus camera" });
+    }
+};
+exports.deleteCamera = deleteCamera;
+//# sourceMappingURL=camera.controller.js.map
