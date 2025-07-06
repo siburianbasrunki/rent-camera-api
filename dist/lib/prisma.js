@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BookingClient = exports.userClient = exports.bannerClient = exports.cameraClient = exports.brandClient = void 0;
-const prisma_1 = require("../generated/prisma");
+const client_1 = require("@prisma/client");
 const prisma = global.prisma ||
-    new prisma_1.PrismaClient({
+    new client_1.PrismaClient({
         log: [
             { level: "warn", emit: "event" },
             { level: "info", emit: "event" },
