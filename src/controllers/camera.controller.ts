@@ -25,14 +25,17 @@ export const getAllCameras = async (
 };
 
 // getCameraById
-export const getCameraById = async (req: Request, res: Response): Promise<void> => {
+export const getCameraById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const cameraId = req.params.id;
     const camera = await cameraClient.findUnique({
       where: { id: cameraId },
       include: {
         brand: true,
-        features: true
+        features: true,
       },
     });
 
@@ -43,18 +46,23 @@ export const getCameraById = async (req: Request, res: Response): Promise<void> 
 
     const response = {
       ...camera,
-      ciri_ciri: camera.features.map(f => ({ ciri: f.value })),
-      features: undefined 
+      ciri_ciri: camera.features.map((f) => ({ ciri: f.value })),
+      features: undefined,
     };
 
     res.status(200).json({ data: response });
   } catch (e) {
     console.log(e);
-    res.status(500).json({ error: "Terjadi kesalahan saat mengambil data camera" });
+    res
+      .status(500)
+      .json({ error: "Terjadi kesalahan saat mengambil data camera" });
   }
 };
 // createCamera
-export const createCamera = async (req: Request, res: Response): Promise<void> => {
+export const createCamera = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { name, price, avaliable, brandId, features } = req.body;
     let imageData = { imageUrl: null, imageId: null };
@@ -79,24 +87,26 @@ export const createCamera = async (req: Request, res: Response): Promise<void> =
         imageUrl: imageData.imageUrl,
         imageId: imageData.imageId,
         features: {
-          create: featuresArray.map((f: string) => ({ value: f }))
-        }
+          create: featuresArray.map((f: string) => ({ value: f })),
+        },
       },
       include: {
-        features: true
-      }
+        features: true,
+      },
     });
 
-    res.status(201).json({ 
+    res.status(201).json({
       data: {
         ...camera,
-        ciri_ciri: camera.features.map(f => ({ ciri: f.value })),
-        features: undefined
-      }
+        ciri_ciri: camera.features.map((f) => ({ ciri: f.value })),
+        features: undefined,
+      },
     });
   } catch (e) {
     console.log(e);
-    res.status(500).json({ error: "Terjadi kesalahan saat membuat camera baru" });
+    res
+      .status(500)
+      .json({ error: "Terjadi kesalahan saat membuat camera baru" });
   }
 };
 
@@ -107,10 +117,11 @@ export const updateCamera = async (
 ): Promise<void> => {
   try {
     const cameraId = req.params.id;
-    const { name, price, avaliable, brandId } = req.body;
+    const { name, price, avaliable, brandId, features } = req.body;
 
     const existingCamera = await cameraClient.findUnique({
       where: { id: cameraId },
+      include: { features: true },
     });
 
     if (!existingCamera) {
@@ -126,6 +137,23 @@ export const updateCamera = async (
     if (brandId) {
       updateData.brand = {
         connect: { id: brandId },
+      };
+    }
+
+    if (features) {
+      const parsedFeatures = JSON.parse(features);
+
+      await cameraClient.update({
+        where: { id: cameraId },
+        data: {
+          features: {
+            deleteMany: {},
+          },
+        },
+      });
+
+      updateData.features = {
+        create: parsedFeatures.map((f: string) => ({ value: f })),
       };
     }
 
@@ -148,9 +176,18 @@ export const updateCamera = async (
         id: cameraId,
       },
       data: updateData,
+      include: {
+        features: true,
+      },
     });
 
-    res.status(200).json({ data: camera });
+    res.status(200).json({
+      data: {
+        ...camera,
+        ciri_ciri: camera.features.map((f) => ({ ciri: f.value })),
+        features: undefined,
+      },
+    });
   } catch (e) {
     console.log(e);
     res.status(500).json({ error: "Terjadi kesalahan saat mengupdate camera" });
@@ -165,7 +202,7 @@ export const deleteCamera = async (
   try {
     const cameraId = req.params.id;
 
-    const camera = await cameraClient.findUnique({
+    const camera = await prisma.camera.findUnique({
       where: { id: cameraId },
     });
 
@@ -174,19 +211,25 @@ export const deleteCamera = async (
       return;
     }
 
-    if (camera.imageId) {
-      await cloudinary.uploader.destroy(camera.imageId);
-    }
-
-    await cameraClient.delete({
-      where: {
-        id: cameraId,
-      },
+    await prisma.feature.deleteMany({
+      where: { cameraId: cameraId }
     });
+
+    await prisma.camera.delete({
+      where: { id: cameraId },
+    });
+
+    if (camera.imageId) {
+      await cloudinary.uploader.destroy(camera.imageId)
+        .catch(e => console.error("Error deleting image from Cloudinary:", e));
+    }
 
     res.status(200).json({ message: "Camera berhasil dihapus" });
   } catch (e) {
-    console.log(e);
-    res.status(500).json({ error: "Terjadi kesalahan saat menghapus camera" });
+    console.error("Delete camera error:", e);
+    res.status(500).json({ 
+      error: "Terjadi kesalahan saat menghapus camera",
+      details: e.message 
+    });
   }
 };
