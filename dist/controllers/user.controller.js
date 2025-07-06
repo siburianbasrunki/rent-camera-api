@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteUser = exports.updateUser = exports.getUserById = exports.getAllUsers = void 0;
 const cloudinaryUpload_1 = require("../utils/cloudinaryUpload");
+const prisma_1 = require("../lib/prisma");
 var Role;
 (function (Role) {
     Role["USER"] = "USER";
@@ -9,7 +10,7 @@ var Role;
 })(Role || (Role = {}));
 const getAllUsers = async (req, res) => {
     try {
-        const users = await prisma.user.findMany({
+        const users = await prisma_1.userClient.findMany({
             select: {
                 id: true,
                 name: true,
@@ -31,7 +32,7 @@ exports.getAllUsers = getAllUsers;
 const getUserById = async (req, res) => {
     try {
         const userId = req.params.id;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.userClient.findUnique({
             where: { id: userId },
             select: {
                 id: true,
@@ -55,34 +56,28 @@ const getUserById = async (req, res) => {
     }
 };
 exports.getUserById = getUserById;
-// Update user profile
 const updateUser = async (req, res) => {
     try {
         const userId = req.params.id;
         const { name, phoneNumber, role } = req.body;
-        // Check if there's any data to update
         if (!name && !phoneNumber && !role && !req.file) {
             res.status(400).json({ error: "No update data provided" });
             return;
         }
         const updateData = {};
-        // Only add fields to update if they are provided
         if (name)
             updateData.name = name;
         if (phoneNumber)
             updateData.phoneNumber = phoneNumber;
         if (role)
             updateData.role = role;
-        // Handle image upload if present
         if (req.file) {
-            const existingUser = await prisma.user.findUnique({
+            const existingUser = await prisma_1.userClient.findUnique({
                 where: { id: userId },
             });
-            // Delete old image if exists
             if (existingUser === null || existingUser === void 0 ? void 0 : existingUser.imageId) {
                 await (0, cloudinaryUpload_1.deleteFromCloudinary)(existingUser.imageId);
             }
-            // Upload new image
             const imageData = await (0, cloudinaryUpload_1.uploadToCloudinary)(req.file.path, {
                 folder: "user-profiles",
                 format: "webp",
@@ -90,7 +85,7 @@ const updateUser = async (req, res) => {
             updateData.imageUrl = imageData.imageUrl;
             updateData.imageId = imageData.imageId;
         }
-        const updatedUser = await prisma.user.update({
+        const updatedUser = await prisma_1.userClient.update({
             where: { id: userId },
             data: updateData,
             select: {
@@ -114,22 +109,20 @@ const updateUser = async (req, res) => {
     }
 };
 exports.updateUser = updateUser;
-// Delete user
 const deleteUser = async (req, res) => {
     try {
         const userId = req.params.id;
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.userClient.findUnique({
             where: { id: userId },
         });
         if (!user) {
             res.status(404).json({ error: "User not found" });
             return;
         }
-        // Delete profile image if exists
         if (user.imageId) {
             await (0, cloudinaryUpload_1.deleteFromCloudinary)(user.imageId);
         }
-        await prisma.user.delete({
+        await prisma_1.userClient.delete({
             where: { id: userId },
         });
         res.status(200).json({ message: "User deleted successfully" });
