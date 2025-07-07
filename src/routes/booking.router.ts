@@ -8,6 +8,7 @@ import {
   getBookingById,
   getUserBookings,
   getAllBookings,
+  getNewestBookings,
 } from "../controllers/booking.controller";
 
 const router = express.Router();
@@ -20,5 +21,6 @@ router.get("/:id", getBookingById);
 router.get("/admin/all", getAllBookings);
 router.get("/:id/payment-status", checkBookingPayment);
 router.patch("/:id/cancel", cancelBooking);
+router.get("/admin/newest", getNewestBookings);
 
 export default router;

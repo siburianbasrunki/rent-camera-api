@@ -15,18 +15,18 @@ export const uploadBanner = async (req: Request, res: Response) => {
   try {
     const { title, subTitle, event } = req.body;
 
-    // Hapus banner lama jika ada
     const existingBanner = await bannerClient.findFirst();
-    if (existingBanner) {
-      await deleteFromCloudinary(existingBanner.imageId);
-      await bannerClient.delete({
-        where: { id: existingBanner.id },
-      });
-    }
+    
+    let imageData = { 
+      imageUrl: existingBanner?.imageUrl || "", 
+      imageId: existingBanner?.imageId || "" 
+    };
 
-    // Upload banner baru ke Cloudinary
-    let imageData = { imageUrl: "", imageId: "" };
     if (req.file) {
+      if (existingBanner?.imageId) {
+        await deleteFromCloudinary(existingBanner.imageId);
+      }
+      
       imageData = await uploadToCloudinary(req.file.path, {
         folder: "banner",
         format: "webp",
@@ -34,18 +34,22 @@ export const uploadBanner = async (req: Request, res: Response) => {
       });
     }
 
-    // Simpan data banner baru ke database
-    const newBanner = await bannerClient.create({
-      data: {
-        imageUrl: imageData.imageUrl,
-        imageId: imageData.imageId,
-        title,
-        subTitle,
-        event,
-      },
-    });
+    const bannerData = {
+      imageUrl: imageData.imageUrl,
+      imageId: imageData.imageId,
+      title: title || existingBanner?.title || "",
+      subTitle: subTitle || existingBanner?.subTitle || "",
+      event: event || existingBanner?.event || "",
+    };
 
-    res.status(201).json({ message: "Banner berhasil diunggah", data: newBanner });
+    const newBanner = existingBanner 
+      ? await bannerClient.update({
+          where: { id: existingBanner.id },
+          data: bannerData
+        })
+      : await bannerClient.create({ data: bannerData });
+
+    res.status(201).json({ message: "Banner updated successfully", data: newBanner });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Terjadi kesalahan saat mengunggah banner" });

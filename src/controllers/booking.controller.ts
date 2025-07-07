@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import prisma from "../lib/prisma";
+import prisma, { BookingClient } from "../lib/prisma";
 import {
   sendBookingConfirmationEmail,
   sendPaymentSuccessEmail,
@@ -143,6 +143,10 @@ export const getBookingById = async (
     const userId = req.userId!;
     const bookingId = req.params.id;
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -156,7 +160,7 @@ export const getBookingById = async (
       return;
     }
 
-    if (booking.userId !== userId) {
+    if (user?.role !== 'ADMIN' && booking.userId !== userId) {
       res.status(403).json({ error: "Unauthorized" });
       return;
     }
@@ -384,5 +388,45 @@ export const getAllBookings = async (
   } catch (error) {
     console.error("Error fetching all bookings:", error);
     res.status(500).json({ error: "Failed to fetch bookings" });
+  }
+};
+
+export const getNewestBookings = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId! },
+    });
+
+    if (!user || user.role !== 'ADMIN') {
+      res.status(403).json({ error: "Unauthorized: Admin access required" });
+      return;
+    }
+
+    const bookings = await BookingClient.findMany({
+      include: {
+        camera: true,
+        payment: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phoneNumber: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 5, 
+    });
+
+    res.status(200).json({ data: bookings });
+  } catch (error) {
+    console.error("Error fetching latest bookings:", error);
+    res.status(500).json({ error: "Failed to fetch latest bookings" });
   }
 };
