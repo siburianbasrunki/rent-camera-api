@@ -9,6 +9,7 @@ export const getAllCameras = async (
   res: Response
 ): Promise<void> => {
   try {
+    
     const allCameras = await cameraClient.findMany({
       include: {
         brand: true,

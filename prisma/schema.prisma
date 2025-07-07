@@ -70,19 +70,26 @@ model Feature {
 }
 
 model Booking {
-  id         String        @id @default(uuid())
-  user       User          @relation(fields: [userId], references: [id])
-  userId     String
-  camera     Camera        @relation(fields: [cameraId], references: [id])
-  cameraId   String
-  date       DateTime
-  duration   Int
-  purpose    String
-  status     BookingStatus @default(PENDING)
-  totalPrice Float
-  payment    Payment?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id               String        @id @default(uuid())
+  user             User          @relation(fields: [userId], references: [id])
+  userId           String
+  camera           Camera        @relation(fields: [cameraId], references: [id])
+  cameraId         String
+  date             DateTime?
+  startDate        DateTime?
+  endDate          DateTime?
+  duration         Int
+  purpose          String
+  status           BookingStatus @default(PENDING)
+  totalPrice       Float
+  payment          Payment?
+  identityProofUrl String?
+  identityProofId  String?
+  returnProofUrl   String?
+  returnProofId    String?
+  returnDate       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 }
 
 enum BookingStatus {
@@ -90,20 +97,22 @@ enum BookingStatus {
   PAID
   CANCELLED
   COMPLETED
+  IN_USE
+  OVERDUE
 }
 
 model Payment {
-  id        String  @id @default(uuid())
-  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  id      String  @id @default(uuid())
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-  bookingId String  @unique
+  bookingId String @unique
 
   paymentMethod   PaymentMethod
   amount          Float
   status          PaymentStatus @default(PENDING)
   midtransOrderId String?
-  paymentCode     String? 
-  paymentUrl      String? 
+  paymentCode     String?
+  paymentUrl      String?
   expiryTime      DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

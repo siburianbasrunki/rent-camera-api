@@ -3,6 +3,7 @@ import prisma, { BookingClient } from "../lib/prisma";
 import {
   sendBookingConfirmationEmail,
   sendPaymentSuccessEmail,
+  sendReturnConfirmationEmail,
 } from "../services/email.service";
 import { AuthenticatedRequest } from "./user.controller";
 import {
@@ -11,6 +12,7 @@ import {
   createQRISPayment,
   getMidtransClientKey,
 } from "../config/midtrans";
+import { uploadToCloudinary } from "../utils/cloudinaryUpload";
 
 export const createBooking = async (
   req: AuthenticatedRequest,
@@ -18,15 +20,16 @@ export const createBooking = async (
 ): Promise<void> => {
   try {
     const userId = req.userId!;
-    const { cameraId, date, duration, purpose, paymentMethod } = req.body;
+    const { cameraId, startDate, endDate, purpose, paymentMethod } = req.body;
+    const identityFile = req.file;
 
     // Validate input
-    if (!cameraId || !date || !duration || !purpose || !paymentMethod) {
+    if (!cameraId || !startDate || !endDate || !purpose || !paymentMethod) {
       res.status(400).json({ error: "Missing required fields" });
       return;
     }
 
-    // Get camera details
+    // Check if camera is available
     const camera = await prisma.camera.findUnique({
       where: { id: cameraId },
     });
@@ -36,24 +39,51 @@ export const createBooking = async (
       return;
     }
 
-    // Calculate total price
-    const pricePerDay = parseFloat(camera.price);
-    const totalPrice = pricePerDay * parseInt(duration);
+    if (!camera.avaliable) {
+      res.status(400).json({ error: "Camera is not available for booking" });
+      return;
+    }
 
+    // Validate identity file
+    if (!identityFile) {
+      res.status(400).json({ error: "Identity proof is required" });
+      return;
+    }
+
+    // Upload identity proof
+    const identityProof = await uploadToCloudinary(identityFile.path, {
+      folder: "identity-proofs",
+    });
+
+    // Calculate duration and total price
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const duration = Math.ceil(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const pricePerDay = parseFloat(camera.price);
+    const totalPrice = pricePerDay * duration;
     // Create booking
     const booking = await prisma.booking.create({
       data: {
         userId,
         cameraId,
-        date: new Date(date),
-        duration: parseInt(duration),
+        startDate: start,
+        endDate: end,
+        duration,
         purpose,
         totalPrice,
+        identityProofUrl: identityProof.imageUrl,
+        identityProofId: identityProof.imageId,
       },
       include: {
         user: true,
         camera: true,
       },
+    });
+    await prisma.camera.update({
+      where: { id: cameraId },
+      data: { avaliable: false },
     });
 
     // Generate order ID
@@ -65,7 +95,7 @@ export const createBooking = async (
       {
         id: camera.id,
         price: pricePerDay,
-        quantity: parseInt(duration),
+        quantity: duration,
         name: camera.name,
       },
     ];
@@ -114,7 +144,7 @@ export const createBooking = async (
     // Send confirmation email
     await sendBookingConfirmationEmail(booking.user.email, booking.user.name, {
       cameraName: booking.camera.name,
-      bookingDate: booking.date.toISOString(),
+      bookingDate: `${booking.startDate.toLocaleDateString()} - ${booking.endDate.toLocaleDateString()}`,
       duration: duration.toString(),
       totalPrice: `Rp${totalPrice.toLocaleString()}`,
       paymentMethod:
@@ -132,6 +162,82 @@ export const createBooking = async (
   } catch (error) {
     console.error("Error creating booking:", error);
     res.status(500).json({ error: "Failed to create booking" });
+  }
+};
+
+export const processReturn = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const bookingId = req.params.id;
+    const returnFile = req.file;
+
+    if (!returnFile) {
+      res.status(400).json({ error: "Return proof is required" });
+      return;
+    }
+
+    // Get booking details
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        camera: true,
+        user: true,
+      },
+    });
+
+    if (!booking) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    if (booking.status !== "PAID" && booking.status !== "IN_USE") {
+      res.status(400).json({ error: "Booking is not in a returnable state" });
+      return;
+    }
+
+    // Upload return proof
+    const returnProof = await uploadToCloudinary(returnFile.path, {
+      folder: "return-proofs",
+    });
+
+    // Update booking and camera status
+    const updatedBooking = await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: "COMPLETED",
+        returnProofUrl: returnProof.imageUrl,
+        returnProofId: returnProof.imageId,
+        returnDate: new Date(),
+      },
+    });
+
+    // Mark camera as available again
+    await prisma.camera.update({
+      where: { id: booking.cameraId },
+      data: { avaliable: true },
+    });
+
+    // Send confirmation email
+    await sendReturnConfirmationEmail(
+      booking.user.email,
+      booking.user.name,
+      {
+        cameraName: booking.camera.name,
+        startDate: booking.startDate.toISOString(),
+        endDate: booking.endDate.toISOString(),
+        returnDate: new Date().toISOString(),
+      }
+    );
+
+    res.status(200).json({
+      message: "Return processed successfully",
+      data: updatedBooking,
+    });
+  } catch (error) {
+    console.error("Error processing return:", error);
+    res.status(500).json({ error: "Failed to process return" });
   }
 };
 
@@ -160,7 +266,7 @@ export const getBookingById = async (
       return;
     }
 
-    if (user?.role !== 'ADMIN' && booking.userId !== userId) {
+    if (user?.role !== "ADMIN" && booking.userId !== userId) {
       res.status(403).json({ error: "Unauthorized" });
       return;
     }
@@ -238,17 +344,17 @@ export const checkBookingPayment = async (
 
     const mapMidtransStatus = (status: string): string => {
       switch (status.toLowerCase()) {
-        case 'pending':
-          return 'PENDING';
-        case 'settlement':
-          return 'SETTLED';
-        case 'expire':
-          return 'EXPIRED';
-        case 'deny':
-        case 'cancel':
-          return 'FAILED';
+        case "pending":
+          return "PENDING";
+        case "settlement":
+          return "SETTLED";
+        case "expire":
+          return "EXPIRED";
+        case "deny":
+        case "cancel":
+          return "FAILED";
         default:
-          return 'PENDING';
+          return "PENDING";
       }
     };
 
@@ -264,7 +370,7 @@ export const checkBookingPayment = async (
       });
 
       // Update booking status if payment is settled
-      if (mappedStatus === 'SETTLED') {
+      if (mappedStatus === "SETTLED") {
         await prisma.booking.update({
           where: { id: booking.id },
           data: {
@@ -275,7 +381,7 @@ export const checkBookingPayment = async (
         // Send payment success email
         await sendPaymentSuccessEmail(booking.user.email, booking.user.name, {
           cameraName: booking.camera.name,
-          bookingDate: booking.date.toISOString(),
+          bookingDate: booking.startDate.toISOString(),
           totalPrice: `Rp${booking.totalPrice.toLocaleString()}`,
           paymentMethod:
             booking.payment.paymentMethod === "BANK_TRANSFER"
@@ -290,19 +396,21 @@ export const checkBookingPayment = async (
         booking,
         paymentStatus: {
           ...paymentStatus,
-          mappedStatus: mappedStatus
+          mappedStatus: mappedStatus,
         },
       },
     });
   } catch (error: any) {
     console.error("Error checking payment status:", error);
-    
-    if (error.message.includes('Transaction not found')) {
-      res.status(404).json({ error: "Transaction not found in payment gateway" });
+
+    if (error.message.includes("Transaction not found")) {
+      res
+        .status(404)
+        .json({ error: "Transaction not found in payment gateway" });
     } else {
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to check payment status",
-        details: error.message 
+        details: error.message,
       });
     }
   }
@@ -361,7 +469,7 @@ export const getAllBookings = async (
       where: { id: req.userId! },
     });
 
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || user.role !== "ADMIN") {
       res.status(403).json({ error: "Unauthorized: Admin access required" });
       return;
     }
@@ -400,7 +508,7 @@ export const getNewestBookings = async (
       where: { id: req.userId! },
     });
 
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || user.role !== "ADMIN") {
       res.status(403).json({ error: "Unauthorized: Admin access required" });
       return;
     }
@@ -421,7 +529,7 @@ export const getNewestBookings = async (
       orderBy: {
         createdAt: "desc",
       },
-      take: 5, 
+      take: 5,
     });
 
     res.status(200).json({ data: bookings });
