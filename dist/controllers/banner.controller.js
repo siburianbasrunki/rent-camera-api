@@ -17,34 +17,35 @@ exports.getBanner = getBanner;
 const uploadBanner = async (req, res) => {
     try {
         const { title, subTitle, event } = req.body;
-        // Hapus banner lama jika ada
         const existingBanner = await prisma_1.bannerClient.findFirst();
-        if (existingBanner) {
-            await (0, cloudinaryUpload_1.deleteFromCloudinary)(existingBanner.imageId);
-            await prisma_1.bannerClient.delete({
-                where: { id: existingBanner.id },
-            });
-        }
-        // Upload banner baru ke Cloudinary
-        let imageData = { imageUrl: "", imageId: "" };
+        let imageData = {
+            imageUrl: (existingBanner === null || existingBanner === void 0 ? void 0 : existingBanner.imageUrl) || "",
+            imageId: (existingBanner === null || existingBanner === void 0 ? void 0 : existingBanner.imageId) || ""
+        };
         if (req.file) {
+            if (existingBanner === null || existingBanner === void 0 ? void 0 : existingBanner.imageId) {
+                await (0, cloudinaryUpload_1.deleteFromCloudinary)(existingBanner.imageId);
+            }
             imageData = await (0, cloudinaryUpload_1.uploadToCloudinary)(req.file.path, {
                 folder: "banner",
                 format: "webp",
                 transformation: [{ width: 1200, crop: "scale" }],
             });
         }
-        // Simpan data banner baru ke database
-        const newBanner = await prisma_1.bannerClient.create({
-            data: {
-                imageUrl: imageData.imageUrl,
-                imageId: imageData.imageId,
-                title,
-                subTitle,
-                event,
-            },
-        });
-        res.status(201).json({ message: "Banner berhasil diunggah", data: newBanner });
+        const bannerData = {
+            imageUrl: imageData.imageUrl,
+            imageId: imageData.imageId,
+            title: title || (existingBanner === null || existingBanner === void 0 ? void 0 : existingBanner.title) || "",
+            subTitle: subTitle || (existingBanner === null || existingBanner === void 0 ? void 0 : existingBanner.subTitle) || "",
+            event: event || (existingBanner === null || existingBanner === void 0 ? void 0 : existingBanner.event) || "",
+        };
+        const newBanner = existingBanner
+            ? await prisma_1.bannerClient.update({
+                where: { id: existingBanner.id },
+                data: bannerData
+            })
+            : await prisma_1.bannerClient.create({ data: bannerData });
+        res.status(201).json({ message: "Banner updated successfully", data: newBanner });
     }
     catch (e) {
         console.error(e);

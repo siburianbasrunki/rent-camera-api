@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendPaymentSuccessEmail = exports.sendBookingConfirmationEmail = exports.sendOtpEmail = exports.sendRegistrationEmail = void 0;
+exports.sendReturnConfirmationEmail = exports.sendPaymentSuccessEmail = exports.sendBookingConfirmationEmail = exports.sendOtpEmail = exports.sendRegistrationEmail = void 0;
 const resend_1 = require("resend");
 const auth_1 = require("../config/auth");
 const resend = new resend_1.Resend(auth_1.config.resendApiKey);
@@ -133,4 +133,46 @@ const sendPaymentSuccessEmail = async (email, name, bookingDetails) => {
     }
 };
 exports.sendPaymentSuccessEmail = sendPaymentSuccessEmail;
+const sendReturnConfirmationEmail = async (email, name, returnDetails) => {
+    try {
+        await resend.emails.send({
+            from: 'no-reply@rent-admin.site',
+            to: email,
+            subject: 'Return Confirmation',
+            html: `
+        <h1>Return Confirmation</h1>
+        <p>Hello ${name},</p>
+        <p>Thank you for returning the camera. Here are the details of your rental:</p>
+        
+        <table style="border-collapse: collapse; width: 100%; max-width: 600px; margin: 20px 0;">
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Camera</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${returnDetails.cameraName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Rental Period</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">
+              ${new Date(returnDetails.startDate).toLocaleDateString()} - 
+              ${new Date(returnDetails.endDate).toLocaleDateString()}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Return Date</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">
+              ${new Date(returnDetails.returnDate).toLocaleDateString()}
+            </td>
+          </tr>
+        </table>
+        
+        <p>We hope you had a great experience with our service!</p>
+        <p>If you have any feedback about your rental experience, please don't hesitate to reach out.</p>
+      `,
+        });
+    }
+    catch (error) {
+        console.error('Error sending return confirmation email:', error);
+        throw error;
+    }
+};
+exports.sendReturnConfirmationEmail = sendReturnConfirmationEmail;
 //# sourceMappingURL=email.service.js.map

@@ -14,3 +14,9 @@ export declare const sendPaymentSuccessEmail: (email: string, name: string, book
     totalPrice: string;
     paymentMethod: string;
 }) => Promise<void>;
+export declare const sendReturnConfirmationEmail: (email: string, name: string, returnDetails: {
+    cameraName: string;
+    startDate: string;
+    endDate: string;
+    returnDate: string;
+}) => Promise<void>;
