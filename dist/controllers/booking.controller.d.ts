@@ -8,3 +8,4 @@ export declare const checkBookingPayment: (req: AuthenticatedRequest, res: Respo
 export declare const cancelBooking: (req: AuthenticatedRequest, res: Response) => Promise<void>;
 export declare const getAllBookings: (req: AuthenticatedRequest, res: Response) => Promise<void>;
 export declare const getNewestBookings: (req: AuthenticatedRequest, res: Response) => Promise<void>;
+export declare const checkAndSendBookingReminders: () => Promise<void>;

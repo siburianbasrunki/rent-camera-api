@@ -12,6 +12,7 @@ const auth_router_1 = __importDefault(require("./routes/auth.router"));
 const user_router_1 = __importDefault(require("./routes/user.router"));
 const booking_router_1 = __importDefault(require("./routes/booking.router"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const cron_1 = require("./config/cron");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 8080;
@@ -26,6 +27,7 @@ app.use("/users", user_router_1.default);
 app.get("/ping", (req, res) => {
     res.json({ message: "pong" }).status(200);
 });
+(0, cron_1.setupCronJobs)();
 app.listen(port, () => {
     console.log(`Server up and running on port: ${port}`);
 });

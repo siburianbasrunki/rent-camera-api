@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getNewestBookings = exports.getAllBookings = exports.cancelBooking = exports.checkBookingPayment = exports.getUserBookings = exports.getBookingById = exports.processReturn = exports.createBooking = void 0;
+exports.checkAndSendBookingReminders = exports.getNewestBookings = exports.getAllBookings = exports.cancelBooking = exports.checkBookingPayment = exports.getUserBookings = exports.getBookingById = exports.processReturn = exports.createBooking = void 0;
 const prisma_1 = __importStar(require("../lib/prisma"));
 const email_service_1 = require("../services/email.service");
 const midtrans_1 = require("../config/midtrans");
@@ -244,7 +244,8 @@ const getBookingById = async (req, res) => {
             res.status(403).json({ error: "Unauthorized" });
             return;
         }
-        res.status(200).json({ data: booking });
+        const response = Object.assign(Object.assign({}, booking), { isReturned: booking.status === 'COMPLETED', hasReturnProof: !!booking.returnProofUrl });
+        res.status(200).json({ data: response });
     }
     catch (error) {
         console.error("Error fetching booking:", error);
@@ -473,4 +474,46 @@ const getNewestBookings = async (req, res) => {
     }
 };
 exports.getNewestBookings = getNewestBookings;
+const checkAndSendBookingReminders = async () => {
+    try {
+        const now = new Date();
+        const reminderTime = new Date(now.getTime() + 5 * 60 * 60 * 1000); // 5 hours from now
+        const bookingsToRemind = await prisma_1.default.booking.findMany({
+            where: {
+                endDate: {
+                    lte: reminderTime, // End date is within next 5 hours
+                    gte: now, // But hasn't passed yet
+                },
+                status: {
+                    in: ['PAID', 'IN_USE'], // Only active bookings
+                },
+                reminderSent: false, // Only if reminder hasn't been sent
+            },
+            include: {
+                user: true,
+                camera: true,
+            },
+        });
+        for (const booking of bookingsToRemind) {
+            try {
+                await (0, email_service_1.sendBookingReminderEmail)(booking.user.email, booking.user.name, {
+                    cameraName: booking.camera.name,
+                    endDate: booking.endDate.toISOString(),
+                });
+                // Mark reminder as sent
+                await prisma_1.default.booking.update({
+                    where: { id: booking.id },
+                    data: { reminderSent: true },
+                });
+            }
+            catch (error) {
+                console.error(`Failed to send reminder for booking ${booking.id}:`, error);
+            }
+        }
+    }
+    catch (error) {
+        console.error('Error in booking reminder job:', error);
+    }
+};
+exports.checkAndSendBookingReminders = checkAndSendBookingReminders;
 //# sourceMappingURL=booking.controller.js.map

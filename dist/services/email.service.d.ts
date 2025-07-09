@@ -20,3 +20,7 @@ export declare const sendReturnConfirmationEmail: (email: string, name: string, 
     endDate: string;
     returnDate: string;
 }) => Promise<void>;
+export declare const sendBookingReminderEmail: (email: string, name: string, bookingDetails: {
+    cameraName: string;
+    endDate: string;
+}) => Promise<void>;

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import prisma, { BookingClient } from "../lib/prisma";
 import {
   sendBookingConfirmationEmail,
+  sendBookingReminderEmail,
   sendPaymentSuccessEmail,
   sendReturnConfirmationEmail,
 } from "../services/email.service";
@@ -271,8 +272,13 @@ export const getBookingById = async (
       res.status(403).json({ error: "Unauthorized" });
       return;
     }
+    const response = {
+      ...booking,
+      isReturned: booking.status === 'COMPLETED',
+      hasReturnProof: !!booking.returnProofUrl,
+    };
 
-    res.status(200).json({ data: booking });
+    res.status(200).json({ data: response });
   } catch (error) {
     console.error("Error fetching booking:", error);
     res.status(500).json({ error: "Failed to fetch booking" });
@@ -537,5 +543,49 @@ export const getNewestBookings = async (
   } catch (error) {
     console.error("Error fetching latest bookings:", error);
     res.status(500).json({ error: "Failed to fetch latest bookings" });
+  }
+};
+
+
+export const checkAndSendBookingReminders = async () => {
+  try {
+    const now = new Date();
+    const reminderTime = new Date(now.getTime() + 5 * 60 * 60 * 1000); // 5 hours from now
+
+    const bookingsToRemind = await prisma.booking.findMany({
+      where: {
+        endDate: {
+          lte: reminderTime, // End date is within next 5 hours
+          gte: now,         // But hasn't passed yet
+        },
+        status: {
+          in: ['PAID', 'IN_USE'], // Only active bookings
+        },
+        reminderSent: false, // Only if reminder hasn't been sent
+      },
+      include: {
+        user: true,
+        camera: true,
+      },
+    });
+
+    for (const booking of bookingsToRemind) {
+      try {
+        await sendBookingReminderEmail(booking.user.email, booking.user.name, {
+          cameraName: booking.camera.name,
+          endDate: booking.endDate.toISOString(),
+        });
+
+        // Mark reminder as sent
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { reminderSent: true },
+        });
+      } catch (error) {
+        console.error(`Failed to send reminder for booking ${booking.id}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error('Error in booking reminder job:', error);
   }
 };

@@ -7,6 +7,7 @@ import authRouter from "./routes/auth.router";
 import userRouter from "./routes/user.router";
 import BookingRouter from "./routes/booking.router"
 import dotenv from "dotenv";
+import { setupCronJobs } from "./config/cron";
 
 dotenv.config();
 
@@ -25,7 +26,7 @@ app.use("/users", userRouter);
 app.get("/ping", (req, res) => {
   res.json({ message: "pong" }).status(200);
 });
-
+setupCronJobs();
 app.listen(port, () => {
   console.log(`Server up and running on port: ${port}`);
 });

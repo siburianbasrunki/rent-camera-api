@@ -197,3 +197,32 @@ export const sendReturnConfirmationEmail = async (
     throw error;
   }
 };
+
+
+export const sendBookingReminderEmail = async (
+  email: string,
+  name: string,
+  bookingDetails: {
+    cameraName: string;
+    endDate: string;
+  }
+) => {
+  try {
+    await resend.emails.send({
+      from: 'no-reply@rent-admin.site',
+      to: email,
+      subject: 'Booking Reminder - Time Almost Up',
+      html: `
+        <h1>Booking Reminder</h1>
+        <p>Hello ${name},</p>
+        <p>Your booking for <strong>${bookingDetails.cameraName}</strong> is ending soon!</p>
+        <p>The booking period ends at: <strong>${new Date(bookingDetails.endDate).toLocaleString()}</strong></p>
+        <p>Please prepare to return the camera on time to avoid any penalties.</p>
+        <p>Thank you for using our service!</p>
+      `,
+    });
+  } catch (error) {
+    console.error('Error sending booking reminder email:', error);
+    throw error;
+  }
+};
