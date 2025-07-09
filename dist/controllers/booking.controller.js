@@ -233,6 +233,7 @@ const getBookingById = async (req, res) => {
             include: {
                 camera: true,
                 payment: true,
+                user: true,
             },
         });
         if (!booking) {

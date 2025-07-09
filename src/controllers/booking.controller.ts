@@ -258,6 +258,7 @@ export const getBookingById = async (
       include: {
         camera: true,
         payment: true,
+        user: true,
       },
     });
 
