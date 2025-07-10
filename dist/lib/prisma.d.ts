@@ -8,4 +8,5 @@ export declare const cameraClient: import(".prisma/client").Prisma.CameraDelegat
 export declare const bannerClient: import(".prisma/client").Prisma.BannerDelegate<import("@prisma/client/runtime/library").DefaultArgs, import(".prisma/client").Prisma.PrismaClientOptions>;
 export declare const userClient: import(".prisma/client").Prisma.UserDelegate<import("@prisma/client/runtime/library").DefaultArgs, import(".prisma/client").Prisma.PrismaClientOptions>;
 export declare const BookingClient: import(".prisma/client").Prisma.BookingDelegate<import("@prisma/client/runtime/library").DefaultArgs, import(".prisma/client").Prisma.PrismaClientOptions>;
+export declare const CameraPhoto: import(".prisma/client").Prisma.CameraPhotoDelegate<import("@prisma/client/runtime/library").DefaultArgs, import(".prisma/client").Prisma.PrismaClientOptions>;
 export default prisma;

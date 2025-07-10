@@ -161,6 +161,7 @@ const createBooking = async (req, res) => {
 };
 exports.createBooking = createBooking;
 const processReturn = async (req, res) => {
+    var _a, _b;
     try {
         const bookingId = req.params.id;
         const returnFile = req.file;
@@ -203,11 +204,11 @@ const processReturn = async (req, res) => {
             where: { id: booking.cameraId },
             data: { avaliable: true },
         });
-        // Send confirmation email
+        // Send confirmation email with proper date handling
         await (0, email_service_1.sendReturnConfirmationEmail)(booking.user.email, booking.user.name, {
             cameraName: booking.camera.name,
-            startDate: booking.startDate.toISOString(),
-            endDate: booking.endDate.toISOString(),
+            startDate: ((_a = booking.startDate) === null || _a === void 0 ? void 0 : _a.toISOString()) || new Date().toISOString(),
+            endDate: ((_b = booking.endDate) === null || _b === void 0 ? void 0 : _b.toISOString()) || new Date().toISOString(),
             returnDate: new Date().toISOString(),
         });
         res.status(200).json({

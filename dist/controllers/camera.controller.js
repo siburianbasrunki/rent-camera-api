@@ -34,13 +34,14 @@ const getCameraById = async (req, res) => {
             include: {
                 brand: true,
                 features: true,
+                cameraPhoto: true,
             },
         });
         if (!camera) {
             res.status(404).json({ error: "Camera tidak ditemukan" });
             return;
         }
-        const response = Object.assign(Object.assign({}, camera), { ciri_ciri: camera.features.map((f) => ({ ciri: f.value })), features: undefined });
+        const response = Object.assign(Object.assign({}, camera), { ciri_ciri: camera.features.map((f) => ({ ciri: f.value })), features: undefined, cameraPhoto: camera.cameraPhoto || [] });
         res.status(200).json({ data: response });
     }
     catch (e) {
