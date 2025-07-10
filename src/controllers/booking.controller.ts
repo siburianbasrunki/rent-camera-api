@@ -220,14 +220,14 @@ export const processReturn = async (
       data: { avaliable: true },
     });
 
-    // Send confirmation email
+    // Send confirmation email with proper date handling
     await sendReturnConfirmationEmail(
       booking.user.email,
       booking.user.name,
       {
         cameraName: booking.camera.name,
-        startDate: booking.startDate.toISOString(),
-        endDate: booking.endDate.toISOString(),
+        startDate: booking.startDate?.toISOString() || new Date().toISOString(),
+        endDate: booking.endDate?.toISOString() || new Date().toISOString(),
         returnDate: new Date().toISOString(),
       }
     );
