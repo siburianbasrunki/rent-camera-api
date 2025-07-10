@@ -37,6 +37,7 @@ export const getCameraById = async (
       include: {
         brand: true,
         features: true,
+        cameraPhoto: true,
       },
     });
 
@@ -49,6 +50,7 @@ export const getCameraById = async (
       ...camera,
       ciri_ciri: camera.features.map((f) => ({ ciri: f.value })),
       features: undefined,
+      cameraPhoto: camera.cameraPhoto || [],
     };
 
     res.status(200).json({ data: response });
