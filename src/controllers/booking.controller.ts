@@ -173,9 +173,21 @@ export const processReturn = async (
   try {
     const bookingId = req.params.id;
     const returnFile = req.file;
+    const { rating, comment } = req.body; // Add review data
 
     if (!returnFile) {
       res.status(400).json({ error: "Return proof is required" });
+      return;
+    }
+
+    // Validate review data if provided
+    if (rating && (rating < 1 || rating > 5)) {
+      res.status(400).json({ error: "Rating must be between 1 and 5 stars" });
+      return;
+    }
+
+    if (comment && comment.length > 200) {
+      res.status(400).json({ error: "Comment must be 200 characters or less" });
       return;
     }
 
@@ -220,7 +232,20 @@ export const processReturn = async (
       data: { avaliable: true },
     });
 
-    // Send confirmation email with proper date handling
+    // Create review if rating is provided
+    if (rating) {
+      await prisma.review.create({
+        data: {
+          bookingId: booking.id,
+          cameraId: booking.cameraId,
+          userId: booking.userId,
+          rating: parseInt(rating),
+          comment: comment || "",
+        },
+      });
+    }
+
+    // Send confirmation email
     await sendReturnConfirmationEmail(
       booking.user.email,
       booking.user.name,

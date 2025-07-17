@@ -25,6 +25,7 @@ model User {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   bookings    Booking[]
+  Review      Review[]
 }
 
 enum Role {
@@ -50,18 +51,20 @@ model Brand {
 }
 
 model Camera {
-  id        String    @id @default(uuid())
-  brand     Brand     @relation(fields: [brandId], references: [id])
-  brandId   String
-  name      String
-  price     String
-  avaliable Boolean
-  imageUrl  String
-  imageId   String
-  features  Feature[]
-  bookings  Booking[]
+  id          String        @id @default(uuid())
+  brand       Brand         @relation(fields: [brandId], references: [id])
+  brandId     String
+  name        String
+  price       String
+  avaliable   Boolean
+  imageUrl    String
+  imageId     String
+  features    Feature[]
+  bookings    Booking[]
   cameraPhoto CameraPhoto[]
+  Review      Review[]
 }
+
 model CameraPhoto {
   id       String @id @default(uuid())
   camera   Camera @relation(fields: [cameraId], references: [id])
@@ -69,6 +72,7 @@ model CameraPhoto {
   imageUrl String
   imageId  String
 }
+
 model Feature {
   id       String @id @default(uuid())
   camera   Camera @relation(fields: [cameraId], references: [id])
@@ -95,9 +99,23 @@ model Booking {
   returnProofUrl   String?
   returnProofId    String?
   returnDate       DateTime?
-  reminderSent Boolean @default(false)
+  reminderSent     Boolean       @default(false)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
+  Review           Review?
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  bookingId String   @unique
+  camera    Camera   @relation(fields: [cameraId], references: [id])
+  cameraId  String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  rating    Int 
+  comment   String   @db.VarChar(200)
+  createdAt DateTime @default(now())
 }
 
 enum BookingStatus {

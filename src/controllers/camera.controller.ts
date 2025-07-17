@@ -236,3 +236,60 @@ export const deleteCamera = async (
     });
   }
 };
+
+export const getCameraReviews = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const cameraId = req.params.cameraId;
+    
+    const reviews = await prisma.review.findMany({
+      where: { cameraId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.status(200).json({ data: reviews });
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    res.status(500).json({ error: "Failed to fetch reviews" });
+  }
+};
+
+export const getReviewById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const reviewId = req.params.id;
+    
+    const review = await prisma.review.findUnique({
+      where: { id: reviewId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+          }
+        },
+        camera: true
+      }
+    });
+
+    if (!review) {
+      res.status(404).json({ error: "Review not found" });
+      return;
+    }
+
+    res.status(200).json({ data: review });
+  } catch (error) {
+    console.error("Error fetching review:", error);
+    res.status(500).json({ error: "Failed to fetch review" });
+  }
+};
